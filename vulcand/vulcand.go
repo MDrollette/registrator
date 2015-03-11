@@ -1,6 +1,7 @@
 package etcd
 
 import (
+	"errors"
 	"log"
 	"net"
 	"net/url"
@@ -14,6 +15,10 @@ import (
 func init() {
 	bridge.Register(new(Factory), "vulcand")
 }
+
+var (
+	ignoredError = errors.New("ignored container")
+)
 
 type Factory struct{}
 
@@ -41,6 +46,11 @@ func (r *VulcandAdapter) Ping() error {
 }
 
 func (r *VulcandAdapter) Register(service *bridge.Service) error {
+	// ignore services with no deploy attr
+	if _, ok := service.Attrs["deploy"]; !ok {
+		return ignoredError
+	}
+
 	r.initService(service)
 
 	path := r.path + "/backends/" + service.Name + "/servers/" + service.ID
